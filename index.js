@@ -41,6 +41,9 @@ const mainMenu = () => {
                 case 'Update an employee role':
                     updateEmployeeRole();
                     break;
+                case 'Exit':
+                    exit();
+                    break;
             }
         });
 
@@ -53,10 +56,11 @@ const viewDepartments = () => {
                 console.error(err);
             }
             console.table('', results);
-            exit();
+
+            mainMenu();
         }
     );
-    
+
 }
 
 const exit = () => {
