@@ -19,15 +19,13 @@ const mainMenu = () => {
     inquirer
         .prompt(questions.mainMenu)
         .then(answers => {
-            switch (answers.menuChoice) {
-                case 'View all departments':
-                    viewInfo('department');
-                    break;
-                case 'View all roles':
-                    viewInfo('role');
-                    break;
-                case 'View all employees':
-                    viewInfo('employee');
+            const choice = answers.menuChoice;
+
+            switch (choice) {
+                case 'department':
+                case 'role':
+                case 'employee':
+                    viewInfo(choice);
                     break;
                 case 'Add a department':
                     addDepartment();
