@@ -17,23 +17,21 @@ const onLoad = () => {
 
 const mainMenu = () => {
     inquirer
-        .prompt(questions.mainMenu)
+        .prompt(questions.getMenu())
         .then(answers => {
-            switch (answers.menuChoice) {
-                case 'View all departments':
-                    viewDepartments();
-                    break;
-                case 'View all roles':
-                    viewRoles();
-                    break;
-                case 'View all employees':
-                    viewEmployees();
+            const choice = answers.menuChoice;
+
+            switch (choice) {
+                case 'department':
+                case 'role':
+                case 'employee':
+                    viewTable(choice);
                     break;
                 case 'Add a department':
                     addDepartment();
                     break;
                 case 'Add a role':
-                    addRole();
+                    addRole('role');
                     break;
                 case 'Add an employee':
                     addEmployee();
@@ -41,22 +39,87 @@ const mainMenu = () => {
                 case 'Update an employee role':
                     updateEmployeeRole();
                     break;
+                case 'Exit':
+                    exit();
+                    break;
             }
         });
-
 }
 
-const viewDepartments = () => {
-    connection.query(
-        'SELECT * FROM department', (err, results) => {
+const viewTable = (table) => {
+    const query = `SELECT * FROM ${table}`
+
+    connection.query(query, (err, results) => {
+        if (err) {
+            console.error(err);
+        }
+
+        console.table('', results);
+
+        mainMenu();
+    });
+}
+
+const addDepartment = () => {
+    inquirer.prompt(questions.newDepartment()).then(answers => {
+        const { departmentName } = answers;
+        const query = 'INSERT INTO department (name) VALUES (?)'
+
+        connection.query(query, departmentName, (err, results) => {
             if (err) {
                 console.error(err);
             }
+
             console.table('', results);
-            exit();
+
+            mainMenu();
+        });
+    });
+}
+
+const addRole = (table) => {
+    inquirer.prompt(questions.newRole()).then(answers => {
+        const query = `INSERT INTO ${table} (title, salary, department_id) VALUES (?, ?, ?)`;
+        const values = [answers.title, answers.salary, answers.department_id]
+
+        connection.query(query, values, (err, results) => {
+            if (err) {
+                console.error(err);
+            }
+
+            console.table('', results);
+
+            mainMenu();
+        });
+    });
+}
+
+const addEmployee = () => {
+    const query = ''
+
+    connection.query(query, (err, results) => {
+        if (err) {
+            console.error(err);
         }
-    );
-    
+
+        console.table('', results);
+
+        mainMenu();
+    });
+}
+
+const updateEmployeeRole = () => {
+    const query = ''
+
+    connection.query(query, (err, results) => {
+        if (err) {
+            console.error(err);
+        }
+
+        console.table('', results);
+
+        mainMenu();
+    });
 }
 
 const exit = () => {
