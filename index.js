@@ -17,7 +17,7 @@ const onLoad = () => {
 
 const mainMenu = () => {
     inquirer
-        .prompt(questions.mainMenu)
+        .prompt(questions.getMenu())
         .then(answers => {
             const choice = answers.menuChoice;
 
@@ -25,13 +25,13 @@ const mainMenu = () => {
                 case 'department':
                 case 'role':
                 case 'employee':
-                    viewInfo(choice);
+                    viewTable(choice);
                     break;
                 case 'Add a department':
                     addDepartment();
                     break;
                 case 'Add a role':
-                    addRole();
+                    addRole('role');
                     break;
                 case 'Add an employee':
                     addEmployee();
@@ -44,10 +44,9 @@ const mainMenu = () => {
                     break;
             }
         });
-
 }
 
-const viewInfo = (table) => {
+const viewTable = (table) => {
     const query = `SELECT * FROM ${table}`
 
     connection.query(query, (err, results) => {
@@ -62,30 +61,36 @@ const viewInfo = (table) => {
 }
 
 const addDepartment = () => {
-    const query = ''
+    inquirer.prompt(questions.newDepartment()).then(answers => {
+        const { departmentName } = answers;
+        const query = 'INSERT INTO department (name) VALUES (?)'
 
-    connection.query(query, (err, results) => {
-        if (err) {
-            console.error(err);
-        }
+        connection.query(query, departmentName, (err, results) => {
+            if (err) {
+                console.error(err);
+            }
 
-        console.table('', results);
+            console.table('', results);
 
-        mainMenu();
+            mainMenu();
+        });
     });
 }
 
-const addRole = () => {
-    const query = ''
+const addRole = (table) => {
+    inquirer.prompt(questions.newRole()).then(answers => {
+        const query = `INSERT INTO ${table} (title, salary, department_id) VALUES (?, ?, ?)`;
+        const values = [answers.title, answers.salary, answers.department_id]
 
-    connection.query(query, (err, results) => {
-        if (err) {
-            console.error(err);
-        }
+        connection.query(query, values, (err, results) => {
+            if (err) {
+                console.error(err);
+            }
 
-        console.table('', results);
+            console.table('', results);
 
-        mainMenu();
+            mainMenu();
+        });
     });
 }
 
