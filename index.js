@@ -21,13 +21,13 @@ const mainMenu = () => {
         .then(answers => {
             switch (answers.menuChoice) {
                 case 'View all departments':
-                    viewDepartments();
+                    viewInfo('department');
                     break;
                 case 'View all roles':
-                    viewRoles();
+                    viewInfo('role');
                     break;
                 case 'View all employees':
-                    viewEmployees();
+                    viewInfo('employee');
                     break;
                 case 'Add a department':
                     addDepartment();
@@ -49,18 +49,74 @@ const mainMenu = () => {
 
 }
 
-const viewDepartments = () => {
-    connection.query(
-        'SELECT * FROM department', (err, results) => {
-            if (err) {
-                console.error(err);
-            }
-            console.table('', results);
+const viewInfo = (table) => {
+    const query = `SELECT * FROM ${table}`
 
-            mainMenu();
+    connection.query(query, (err, results) => {
+        if (err) {
+            console.error(err);
         }
-    );
 
+        console.table('', results);
+
+        mainMenu();
+    });
+}
+
+const addDepartment = () => {
+    const query = ''
+
+    connection.query(query, (err, results) => {
+        if (err) {
+            console.error(err);
+        }
+
+        console.table('', results);
+
+        mainMenu();
+    });
+}
+
+const addRole = () => {
+    const query = ''
+
+    connection.query(query, (err, results) => {
+        if (err) {
+            console.error(err);
+        }
+
+        console.table('', results);
+
+        mainMenu();
+    });
+}
+
+const addEmployee = () => {
+    const query = ''
+
+    connection.query(query, (err, results) => {
+        if (err) {
+            console.error(err);
+        }
+
+        console.table('', results);
+
+        mainMenu();
+    });
+}
+
+const updateEmployeeRole = () => {
+    const query = ''
+
+    connection.query(query, (err, results) => {
+        if (err) {
+            console.error(err);
+        }
+
+        console.table('', results);
+
+        mainMenu();
+    });
 }
 
 const exit = () => {
