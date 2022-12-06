@@ -1,141 +1,97 @@
-const mysql = require('mysql2');
-const inquirer = require('inquirer');
+require('dotenv').config();
+const getConnection = require('./config/connection')
+const { prompt } = require('inquirer');
 const cTable = require('console.table');
 const questions = require('./lib/questions');
 
-// create the connection to database
-const connection = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: 'password0123',
-    database: 'employees_db'
-});
+const connection = getConnection();
 
-const onLoad = () => {
+const init = async () => {
     mainMenu();
 }
 
-const mainMenu = () => {
-    inquirer
-        .prompt(questions.getMenu())
-        .then(answers => {
-            const choice = answers.menuChoice;
-
-            switch (choice) {
-                case 'department':
-                case 'role':
-                case 'employee':
-                    viewTable(choice);
-                    break;
-                case 'Add a department':
-                    addDepartment();
-                    break;
-                case 'Add a role':
-                    addRole('role');
-                    break;
-                case 'Add an employee':
-                    addEmployee();
-                    break;
-                case 'Update an employee role':
-                    updateEmployeeRole();
-                    break;
-                case 'Exit':
-                    exit();
-                    break;
-            }
-        });
+const mainMenu = async () => {
+    const answers = await prompt(questions.getMenu())
+    navigation(answers.menuChoice);
 }
 
-const viewTable = table => {
+const navigation = async menuChoice => {
+    switch (menuChoice) {
+        case 'department':
+        case 'role':
+        case 'employee':
+            await viewTable(menuChoice);
+            break;
+        case 'Add a department':
+            addDepartment();
+            break;
+        case 'Add a role':
+            addRole('role');
+            break;
+        case 'Add an employee':
+            addEmployee();
+            break;
+        case 'Update an employee role':
+            updateEmployeeRole();
+            break;
+        case 'Exit':
+            exit();
+            return;
+    }
+
+    mainMenu();
+}
+
+const viewTable = async table => {
     const query = `SELECT * FROM ${table}`
-
-    connection.query(query, (err, results) => {
-        if (err) {
-            console.error(err);
-        }
-
-        console.table('', results);
-
-        mainMenu();
-    });
+    // pass in connection through function
+    const [results, buffer] = await (await connection).execute(query);
+    console.table('', results);
 }
 
-const addDepartment = () => {
-    inquirer.prompt(questions.newDepartment()).then(answers => {
-        const { departmentName } = answers;
-        const query = 'INSERT INTO department (name) VALUES (?)'
+const addDepartment = async () => {
+    const answers = await prompt(questions.newDepartment())
+    const { departmentName } = answers;
+    const query = 'INSERT INTO department (name) VALUES (?)'
 
-        connection.query(query, departmentName, (err, results) => {
-            if (err) {
-                console.error(err);
-            }
+    await (await connection).execute(query, [departmentName]);
 
-            console.table('', results);
-
-            mainMenu();
-        });
-    });
+    console.log(`The ${departmentName} department has been added\n`);
 }
 
-const addRole = table => {
-    connection.query('SELECT * FROM department', (err, results) => {
-        if (err) {
-            console.error(err);
-        }
-        
-        const choices = results.map(obj => {
-            return { name: obj.name, value: obj.id }
-        })
+const addRole = async table => {
+    const [departments, buffer] =
+        await (await connection).execute('SELECT * FROM department')
 
-        inquirer
-            .prompt(questions.newRole(choices))
-            .then(answers => {
-                const query = `INSERT INTO ${table} (title, salary, department_id) VALUES (?, ?, ?)`;
-                const values = [answers.title, answers.salary, answers.department_id]
+    const choices = departments.map(obj => ({ name: obj.name, value: obj.id }));
+    const answers = await prompt(questions.newRole(choices))
 
-                connection.query(query, values, (err, results) => {
-                    if (err) {
-                        console.error(err);
-                    }
+    const query = `INSERT INTO ${table} (title, salary, department_id) VALUES (?, ?, ?)`;
+    const values = [answers.title, answers.salary, answers.department_id]
 
-                    console.table('', results);
+    const [results, buffer2] = await (await connection).execute(query, values)
 
-                    mainMenu();
-                });
-            });
-    });
+    console.log(`The ${values[0]} role has been added\n`);
 }
 
-const addEmployee = () => {
+const addEmployee = async () => {
     const query = ''
 
-    connection.query(query, (err, results) => {
-        if (err) {
-            console.error(err);
-        }
-
-        console.table('', results);
-
-        mainMenu();
-    });
+    const [results, buffer] = await (await connection).execute(query)
+    console.table('', results);
 }
 
-const updateEmployeeRole = () => {
+const updateEmployeeRole = async () => {
     const query = ''
 
-    connection.query(query, (err, results) => {
-        if (err) {
-            console.error(err);
-        }
+    const [results, buffer] =
+        await (await connection).execute(query)
 
-        console.table('', results);
-
-        mainMenu();
-    });
+    console.table('', results);
 }
 
-const exit = () => {
-    connection.end();
+const exit = async () => {
+    (await connection).end();
 }
 
-onLoad();
+init();
