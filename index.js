@@ -1,4 +1,5 @@
 require('dotenv').config();
+const Query = require('./lib/Query')
 const { prompt } = require('inquirer');
 const cTable = require('console.table');
 const getConnection = require('./config/connection');
@@ -48,9 +49,9 @@ const navigation = async menuChoice => {
 
 // loads table depending on table name passed in
 const viewTable = async table => {
-    const query = `SELECT * FROM ${table}`;
+    const query = new Query(table);
     // pass in connection through function
-    const [results] = await (await connection).query(query);
+    const [results] = await (await connection).query(query.viewTable());
     console.table('', results);
 }
 
@@ -99,10 +100,9 @@ const addEmployee = async () => {
 
     const answers = await prompt(newEmployee(roleChoices, managerChoices));
 
-    // turns answers into array of key-value pair then maps it as an array of object literals
+    // turns answers into array of key-value pair then maps it as an array of values
     const values = Object.entries(answers).map(arr => arr[1]);
 
-    console.log(values);
     try {
         await (await connection).query(query, values);
     } catch (err) {
