@@ -46,7 +46,7 @@ const mainMenu = () => {
         });
 }
 
-const viewTable = (table) => {
+const viewTable = table => {
     const query = `SELECT * FROM ${table}`
 
     connection.query(query, (err, results) => {
@@ -77,20 +77,32 @@ const addDepartment = () => {
     });
 }
 
-const addRole = (table) => {
-    inquirer.prompt(questions.newRole()).then(answers => {
-        const query = `INSERT INTO ${table} (title, salary, department_id) VALUES (?, ?, ?)`;
-        const values = [answers.title, answers.salary, answers.department_id]
+const addRole = table => {
+    connection.query('SELECT * FROM department', (err, results) => {
+        if (err) {
+            console.error(err);
+        }
+        
+        const choices = results.map(obj => {
+            return { name: obj.name, value: obj.id }
+        })
 
-        connection.query(query, values, (err, results) => {
-            if (err) {
-                console.error(err);
-            }
+        inquirer
+            .prompt(questions.newRole(choices))
+            .then(answers => {
+                const query = `INSERT INTO ${table} (title, salary, department_id) VALUES (?, ?, ?)`;
+                const values = [answers.title, answers.salary, answers.department_id]
 
-            console.table('', results);
+                connection.query(query, values, (err, results) => {
+                    if (err) {
+                        console.error(err);
+                    }
 
-            mainMenu();
-        });
+                    console.table('', results);
+
+                    mainMenu();
+                });
+            });
     });
 }
 
