@@ -112,12 +112,23 @@ const addEmployee = async () => {
 
 // updates employee role
 const updateEmployee = async () => {
-    const query = '';
+    const query = 'UPDATE employee SET role_id = ? WHERE id = ?';
 
-    const [results] = await (await connection).query(query);
-    const answers = await prompt(updateEmployeeRole())
+    const [employeeTable] = await (await connection).query('SELECT * FROM employee');
+    const [roleTable] = await (await connection).query('SELECT * FROM role');
 
-    console.table('', results);
+    const empChoices = employeeTable.map(obj => {
+        const employee = {
+            name: `${obj.first_name} ${obj.last_name}`,
+            value: obj.id
+        }
+
+        return employee;
+    })
+    const roleChoices = roleTable.map(obj => ({ name: obj.title, value: obj.id }));
+
+    const { employeeId, newRole } = await prompt(updateEmployeeRole(empChoices, roleChoices));
+    await (await connection).query(query, [newRole, employeeId]);
 }
 
 const exit = async () => {
