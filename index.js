@@ -113,7 +113,9 @@ const getEmployees = async (query, exclude) => {
         { name: `${obj.first_name} ${obj.last_name}`, value: obj.id }
     ));
 
-    const { employeeId } = await prompt(questions.selectEmployee(empChoices));
+    // only time 'hasNull' in questions obj should be true is when 
+    // exclude variable is passed in
+    const { employeeId } = await prompt(questions.selectEmployee(empChoices, exclude));
 
     return employeeId;
 }
@@ -153,17 +155,8 @@ const updateEmployeeManager = async () => {
     const query = new Query('employee');
     const employeeId = await getEmployees(query);
 
-    const [[results]] = await (await connection).query(
-        `SELECT manager_id FROM employee WHERE id = ${employeeId}`
-    );
-    const excludeId = results.role_id;
-
-    const [managerTable] = await (await connection).query(
-        query.getTable('role', excludeId)
-    );
-    const roleChoices = managerTable.map(obj => (
-        { name: obj.title, value: obj.id }
-    ));
+    // exclude himself as manager
+    const newManager = await getEmployees(query, employeeId);
 
     await (await connection)
         .query(query.updateEmployee('manager'), [newManager, employeeId]);
