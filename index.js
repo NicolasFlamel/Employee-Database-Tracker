@@ -10,8 +10,9 @@ const connection = getConnection();
 
 // loads main menu
 const mainMenu = async () => {
-    const answers = await prompt(questions.getMenu());
-    navigation(answers.menuChoice);
+    const { menuChoice } = await prompt(questions.getMenu());
+    const { subMenuChoice } = await prompt(questions.getSubMenu(menuChoice));
+    navigation(subMenuChoice);
 }
 
 // calls specific function depending on department selected
@@ -36,6 +37,8 @@ const navigation = async menuChoice => {
             break;
         case 'updateEmployeeManager':
             await updateEmployeeManager();
+            break;
+        case 'return':
             break;
         case 'exit':
             exit();
@@ -160,6 +163,10 @@ const updateEmployeeManager = async () => {
 
     await (await connection)
         .query(query.updateEmployee('manager'), [newManager, employeeId]);
+}
+
+const deleteFromTable = async () => {
+
 }
 
 const exit = async () => {
