@@ -10,8 +10,9 @@ const connection = getConnection();
 
 // loads main menu
 const mainMenu = async () => {
-    const answers = await prompt(questions.getMenu());
-    navigation(answers.menuChoice);
+    const { menuChoice } = await prompt(questions.getMenu());
+    const { subMenuChoice } = await prompt(questions.getSubMenu(menuChoice));
+    navigation(subMenuChoice);
 }
 
 // calls specific function depending on department selected
@@ -37,11 +38,19 @@ const navigation = async menuChoice => {
         case 'updateEmployeeManager':
             await updateEmployeeManager();
             break;
+        case 'deleteDepartment':
+        case 'deleteRole':
+        case 'deleteEmployee':
+            await deleteFromTable(menuChoice);
+            break;
+        case 'return':
+            break;
         case 'exit':
             exit();
             return;
     }
 
+    console.log('\nReturning to main menu');
     mainMenu();
 }
 
@@ -51,6 +60,63 @@ const viewTable = async table => {
 
     const [results] = await (await connection).query(query.viewTable());
     console.table('', results);
+}
+
+const getDepartments = async (query, exclude) => {
+    // gets role table
+    const [depTable] = await (await connection).query(
+        query.getTable('department', exclude)
+    );
+    // turns table into useable inquirer choices
+    const depChoices = depTable.map(obj => (
+        { name: obj.name, value: obj.id }
+    ));
+
+    const { departmentId } = await prompt(questions.selectDepartment(depChoices));
+
+    return departmentId;
+}
+
+const getRoles = async (query, exclude) => {
+    // gets role table
+    const [roleTable] = await (await connection).query(
+        query.getTable('role', exclude)
+    );
+    // turns table into useable inquirer choices
+    const roleChoices = roleTable.map(obj => (
+        { name: obj.title, value: obj.id }
+    ));
+
+    const { roleId } = await prompt(questions.selectRole(roleChoices));
+
+    return roleId;
+}
+
+const getEmployees = async (query, exclude) => {
+    // gets employee table
+    const [employeeTable] = await (await connection)
+        .query(query.getTable('employee', exclude));
+    // turns table into useable inquirer choices
+    const empChoices = employeeTable.map(obj => (
+        { name: `${obj.first_name} ${obj.last_name}`, value: obj.id }
+    ));
+
+    const { employeeId } = await prompt(questions.selectEmployee(empChoices));
+
+    return employeeId;
+}
+
+const getManagers = async (query, exclude) => {
+    const [managerTable] = await (await connection)
+        .query(query.getTable('employee', exclude));
+    // turns table into useable inquirer choices
+    const managerChoices = managerTable.map(obj => (
+        { name: `${obj.first_name} ${obj.last_name}`, value: obj.id }
+    ));
+
+    const { managerId } = await prompt(questions.selectManager(managerChoices));
+
+    return managerId;
 }
 
 // adds new department to department table
@@ -83,54 +149,15 @@ const addRole = async () => {
 
 // adds new employee to employee table
 const addEmployee = async () => {
-    // need id, first_name, last_name, role_id, manager_id
     const query = new Query('employee');
 
-    const [roles] = await (await connection).query(query.getTable('role'));
-    const [managers] = await (await connection).query(query.getTable('employee'));
+    const { first_name, last_name } = await prompt(questions.newEmployee());
+    const role = await getRoles(query);
+    const manager = await getManagers(query);
 
-    const roleChoices = roles.map(obj => (
-        { name: obj.title, value: obj.id }
-    ));
-    const managerChoices = managers.map(obj => (
-        { name: `${obj.first_name} ${obj.last_name}`, value: obj.id }
-    ));
+    const employee = [first_name, last_name, role, manager];
 
-    const answers = await prompt(questions.newEmployee(roleChoices, managerChoices));
-
-    // turns answers into array of key-value pair then maps it as an array of values
-    const values = Object.entries(answers).map(arr => arr[1]);
-
-    await (await connection).query(query.addToTable(), values);
-}
-
-const getEmployees = async (query, exclude) => {
-    // gets employee table
-    const [employeeTable] = await (await connection)
-        .query(query.getTable('employee', exclude));
-    // turns table into useable inquirer choices
-    const empChoices = employeeTable.map(obj => (
-        { name: `${obj.first_name} ${obj.last_name}`, value: obj.id }
-    ));
-
-    const { employeeId } = await prompt(questions.selectEmployee(empChoices));
-
-    return employeeId;
-}
-
-const getRoles = async (query, exclude) => {
-    // gets role table
-    const [roleTable] = await (await connection).query(
-        query.getTable('role', exclude)
-    );
-    // turns table into useable inquirer choices
-    const roleChoices = roleTable.map(obj => (
-        { name: obj.title, value: obj.id }
-    ));
-
-    const { newRole } = await prompt(questions.selectRole(roleChoices));
-
-    return newRole;
+    await (await connection).query(query.addToTable(), employee);
 }
 
 // updates employee role
@@ -153,20 +180,37 @@ const updateEmployeeManager = async () => {
     const query = new Query('employee');
     const employeeId = await getEmployees(query);
 
-    const [[results]] = await (await connection).query(
-        `SELECT manager_id FROM employee WHERE id = ${employeeId}`
-    );
-    const excludeId = results.role_id;
-
-    const [managerTable] = await (await connection).query(
-        query.getTable('role', excludeId)
-    );
-    const roleChoices = managerTable.map(obj => (
-        { name: obj.title, value: obj.id }
-    ));
+    // exclude himself as manager
+    const newManager = await getManagers(query, employeeId);
 
     await (await connection)
         .query(query.updateEmployee('manager'), [newManager, employeeId]);
+    console.log('Data has been updated\n');
+}
+
+const deleteFromTable = async (menuChoice) => {
+    let id;
+    let query;
+
+    switch (menuChoice) {
+        case 'deleteDepartment':
+            query = new Query('department');
+            id = await getDepartments(query);
+            break;
+        case 'deleteRole':
+            query = new Query('role');
+            id = await getRoles(query);
+            break;
+        case 'deleteEmployee':
+            query = new Query('employee');
+            id = await getEmployees(query, true);
+            break;
+    }
+
+    if (id) {
+        await (await connection).query(query.deleteFromTable(id));
+        console.log('Data has been deleted\n');
+    }
 }
 
 const exit = async () => {
