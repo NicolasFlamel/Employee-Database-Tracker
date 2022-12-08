@@ -3,19 +3,14 @@ const Query = require('./lib/Query')
 const { prompt } = require('inquirer');
 const cTable = require('console.table');
 const getConnection = require('./config/connection');
-const { getMenu, newDepartment, newRole, newEmployee, updateEmployeeRole }
-    = require('./lib/questions');
+const questions = require('./lib/questions');
 
 // sets up mysql connection
 const connection = getConnection();
 
-const init = async () => {
-    mainMenu();
-}
-
 // loads main menu
 const mainMenu = async () => {
-    const answers = await prompt(getMenu());
+    const answers = await prompt(questions.getMenu());
     navigation(answers.menuChoice);
 }
 
@@ -27,19 +22,22 @@ const navigation = async menuChoice => {
         case 'employee':
             await viewTable(menuChoice);
             break;
-        case 'Add a department':
+        case 'addDepartment':
             await addDepartment();
             break;
-        case 'Add a role':
+        case 'addRole':
             await addRole();
             break;
-        case 'Add an employee':
+        case 'addEmployee':
             await addEmployee();
             break;
-        case 'Update an employee role':
-            await updateEmployee();
+        case 'updateEmployeeRole':
+            await updateEmployeeRole();
             break;
-        case 'Exit':
+        case 'updateEmployeeManager':
+            await updateEmployeeManager();
+            break;
+        case 'exit':
             exit();
             return;
     }
@@ -50,14 +48,14 @@ const navigation = async menuChoice => {
 // loads table depending on table name passed in
 const viewTable = async table => {
     const query = new Query(table);
-    // pass in connection through function
+
     const [results] = await (await connection).query(query.viewTable());
     console.table('', results);
 }
 
 // adds new department to department table
 const addDepartment = async () => {
-    const answers = await prompt(newDepartment());
+    const answers = await prompt(questions.newDepartment());
     const { departmentName } = answers;
     const query = new Query('department')
 
@@ -70,12 +68,12 @@ const addDepartment = async () => {
 const addRole = async () => {
     const query = new Query('role');
 
-    // saves all department data
+    // saves all department table data
     const [departments] = await (await connection).query(query.getTable('department'));
 
     // changes 'id' to 'value' to be used in inquirer format
     const choices = departments.map(obj => ({ name: obj.name, value: obj.id }));
-    const answers = await prompt(newRole(choices));
+    const answers = await prompt(questions.newRole(choices));
     const values = [answers.title, answers.salary, answers.department_id];
 
     await (await connection).query(query.addToTable(), values);
@@ -98,7 +96,7 @@ const addEmployee = async () => {
         { name: `${obj.first_name} ${obj.last_name}`, value: obj.id }
     ));
 
-    const answers = await prompt(newEmployee(roleChoices, managerChoices));
+    const answers = await prompt(questions.newEmployee(roleChoices, managerChoices));
 
     // turns answers into array of key-value pair then maps it as an array of values
     const values = Object.entries(answers).map(arr => arr[1]);
@@ -106,29 +104,73 @@ const addEmployee = async () => {
     await (await connection).query(query.addToTable(), values);
 }
 
+const getEmployees = async (query, exclude) => {
+    // gets employee table
+    const [employeeTable] = await (await connection)
+        .query(query.getTable('employee', exclude));
+    // turns table into useable inquirer choices
+    const empChoices = employeeTable.map(obj => (
+        { name: `${obj.first_name} ${obj.last_name}`, value: obj.id }
+    ));
+
+    const { employeeId } = await prompt(questions.selectEmployee(empChoices));
+
+    return employeeId;
+}
+
+const getRoles = async (query, exclude) => {
+    // gets role table
+    const [roleTable] = await (await connection).query(
+        query.getTable('role', exclude)
+    );
+    // turns table into useable inquirer choices
+    const roleChoices = roleTable.map(obj => (
+        { name: obj.title, value: obj.id }
+    ));
+
+    const { newRole } = await prompt(questions.selectRole(roleChoices));
+
+    return newRole;
+}
+
 // updates employee role
-const updateEmployee = async () => {
+const updateEmployeeRole = async () => {
     const query = new Query('employee');
+    const employeeId = await getEmployees(query);
 
-    const [employeeTable] = await (await connection).query(query.getTable('employee'));
-    const [roleTable] = await (await connection).query(query.getTable('role'));
+    const [[results]] = await (await connection).query(
+        `SELECT role_id FROM employee WHERE id = ${employeeId}`
+    );
+    const excludeId = results.role_id;
 
-    const empChoices = employeeTable.map(obj => {
-        const employee = {
-            name: `${obj.first_name} ${obj.last_name}`,
-            value: obj.id
-        }
+    const newRole = await getRoles(query, excludeId);
 
-        return employee;
-    })
-    const roleChoices = roleTable.map(obj => ({ name: obj.title, value: obj.id }));
+    await (await connection)
+        .query(query.updateEmployee('role'), [newRole, employeeId]);
+}
 
-    const { employeeId, newRole } = await prompt(updateEmployeeRole(empChoices, roleChoices));
-    await (await connection).query(query.updateTable('employee'), [newRole, employeeId]);
+const updateEmployeeManager = async () => {
+    const query = new Query('employee');
+    const employeeId = await getEmployees(query);
+
+    const [[results]] = await (await connection).query(
+        `SELECT manager_id FROM employee WHERE id = ${employeeId}`
+    );
+    const excludeId = results.role_id;
+
+    const [managerTable] = await (await connection).query(
+        query.getTable('role', excludeId)
+    );
+    const roleChoices = managerTable.map(obj => (
+        { name: obj.title, value: obj.id }
+    ));
+
+    await (await connection)
+        .query(query.updateEmployee('manager'), [newManager, employeeId]);
 }
 
 const exit = async () => {
     (await connection).end();
 }
 
-init();
+mainMenu();
