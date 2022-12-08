@@ -56,6 +56,37 @@ const viewTable = async table => {
     console.table('', results);
 }
 
+const getRoles = async (query, exclude) => {
+    // gets role table
+    const [roleTable] = await (await connection).query(
+        query.getTable('role', exclude)
+    );
+    // turns table into useable inquirer choices
+    const roleChoices = roleTable.map(obj => (
+        { name: obj.title, value: obj.id }
+    ));
+
+    const { role } = await prompt(questions.selectRole(roleChoices));
+
+    return role;
+}
+
+const getEmployees = async (query, exclude) => {
+    // gets employee table
+    const [employeeTable] = await (await connection)
+        .query(query.getTable('employee', exclude));
+    // turns table into useable inquirer choices
+    const empChoices = employeeTable.map(obj => (
+        { name: `${obj.first_name} ${obj.last_name}`, value: obj.id }
+    ));
+
+    // only time 'hasNull' in questions obj should be true is when 
+    // exclude variable is passed in
+    const { employeeId } = await prompt(questions.selectEmployee(empChoices, exclude));
+
+    return employeeId;
+}
+
 // adds new department to department table
 const addDepartment = async () => {
     const answers = await prompt(questions.newDepartment());
@@ -86,56 +117,15 @@ const addRole = async () => {
 
 // adds new employee to employee table
 const addEmployee = async () => {
-    // need id, first_name, last_name, role_id, manager_id
     const query = new Query('employee');
 
-    const [roles] = await (await connection).query(query.getTable('role'));
-    const [managers] = await (await connection).query(query.getTable('employee'));
+    const { first_name, last_name } = await prompt(questions.newEmployee());
+    const role = await getRoles(query);
+    const manager = await getEmployees(query);
 
-    const roleChoices = roles.map(obj => (
-        { name: obj.title, value: obj.id }
-    ));
-    const managerChoices = managers.map(obj => (
-        { name: `${obj.first_name} ${obj.last_name}`, value: obj.id }
-    ));
+    const employee = [first_name, last_name, role, manager];
 
-    const answers = await prompt(questions.newEmployee(roleChoices, managerChoices));
-
-    // turns answers into array of key-value pair then maps it as an array of values
-    const values = Object.entries(answers).map(arr => arr[1]);
-
-    await (await connection).query(query.addToTable(), values);
-}
-
-const getEmployees = async (query, exclude) => {
-    // gets employee table
-    const [employeeTable] = await (await connection)
-        .query(query.getTable('employee', exclude));
-    // turns table into useable inquirer choices
-    const empChoices = employeeTable.map(obj => (
-        { name: `${obj.first_name} ${obj.last_name}`, value: obj.id }
-    ));
-
-    // only time 'hasNull' in questions obj should be true is when 
-    // exclude variable is passed in
-    const { employeeId } = await prompt(questions.selectEmployee(empChoices, exclude));
-
-    return employeeId;
-}
-
-const getRoles = async (query, exclude) => {
-    // gets role table
-    const [roleTable] = await (await connection).query(
-        query.getTable('role', exclude)
-    );
-    // turns table into useable inquirer choices
-    const roleChoices = roleTable.map(obj => (
-        { name: obj.title, value: obj.id }
-    ));
-
-    const { newRole } = await prompt(questions.selectRole(roleChoices));
-
-    return newRole;
+    await (await connection).query(query.addToTable(), employee);
 }
 
 // updates employee role
