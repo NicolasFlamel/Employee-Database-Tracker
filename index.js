@@ -38,6 +38,11 @@ const navigation = async menuChoice => {
         case 'updateEmployeeManager':
             await updateEmployeeManager();
             break;
+        case 'deleteDepartment':
+        case 'deleteRole':
+        case 'deleteEmployee':
+            await deleteFromTable(menuChoice);
+            break;
         case 'return':
             break;
         case 'exit':
@@ -45,6 +50,7 @@ const navigation = async menuChoice => {
             return;
     }
 
+    console.log('\nReturning to main menu');
     mainMenu();
 }
 
@@ -54,6 +60,21 @@ const viewTable = async table => {
 
     const [results] = await (await connection).query(query.viewTable());
     console.table('', results);
+}
+
+const getDepartments = async (query, exclude) => {
+    // gets role table
+    const [depTable] = await (await connection).query(
+        query.getTable('department', exclude)
+    );
+    // turns table into useable inquirer choices
+    const depChoices = depTable.map(obj => (
+        { name: obj.name, value: obj.id }
+    ));
+
+    const { departmentId } = await prompt(questions.selectDepartment(depChoices));
+
+    return departmentId;
 }
 
 const getRoles = async (query, exclude) => {
@@ -66,9 +87,9 @@ const getRoles = async (query, exclude) => {
         { name: obj.title, value: obj.id }
     ));
 
-    const { role } = await prompt(questions.selectRole(roleChoices));
+    const { roleId } = await prompt(questions.selectRole(roleChoices));
 
-    return role;
+    return roleId;
 }
 
 const getEmployees = async (query, exclude) => {
@@ -80,11 +101,22 @@ const getEmployees = async (query, exclude) => {
         { name: `${obj.first_name} ${obj.last_name}`, value: obj.id }
     ));
 
-    // only time 'hasNull' in questions obj should be true is when 
-    // exclude variable is passed in
-    const { employeeId } = await prompt(questions.selectEmployee(empChoices, exclude));
+    const { employeeId } = await prompt(questions.selectEmployee(empChoices));
 
     return employeeId;
+}
+
+const getManagers = async (query, exclude) => {
+    const [managerTable] = await (await connection)
+        .query(query.getTable('employee', exclude));
+    // turns table into useable inquirer choices
+    const managerChoices = managerTable.map(obj => (
+        { name: `${obj.first_name} ${obj.last_name}`, value: obj.id }
+    ));
+
+    const { managerId } = await prompt(questions.selectManager(managerChoices));
+
+    return managerId;
 }
 
 // adds new department to department table
@@ -121,7 +153,7 @@ const addEmployee = async () => {
 
     const { first_name, last_name } = await prompt(questions.newEmployee());
     const role = await getRoles(query);
-    const manager = await getEmployees(query);
+    const manager = await getManagers(query);
 
     const employee = [first_name, last_name, role, manager];
 
@@ -149,14 +181,36 @@ const updateEmployeeManager = async () => {
     const employeeId = await getEmployees(query);
 
     // exclude himself as manager
-    const newManager = await getEmployees(query, employeeId);
+    const newManager = await getManagers(query, employeeId);
 
     await (await connection)
         .query(query.updateEmployee('manager'), [newManager, employeeId]);
+    console.log('Data has been updated\n');
 }
 
-const deleteFromTable = async () => {
+const deleteFromTable = async (menuChoice) => {
+    let id;
+    let query;
 
+    switch (menuChoice) {
+        case 'deleteDepartment':
+            query = new Query('department');
+            id = await getDepartments(query);
+            break;
+        case 'deleteRole':
+            query = new Query('role');
+            id = await getRoles(query);
+            break;
+        case 'deleteEmployee':
+            query = new Query('employee');
+            id = await getEmployees(query, true);
+            break;
+    }
+
+    if (id) {
+        await (await connection).query(query.deleteFromTable(id));
+        console.log('Data has been deleted\n');
+    }
 }
 
 const exit = async () => {
