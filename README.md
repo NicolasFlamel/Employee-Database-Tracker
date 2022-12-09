@@ -6,11 +6,16 @@ This project was made with the intention of practicing and developing my SQL ski
 
 ## Installation
 
-
+- Have Nodejs installed (I used v16.18)
+- Install npm dependencies
+    - use 'npm install' on terminal once navigated to folder
+- Have mysql installed
+    - run the schema.sql file with your mysql shell
+    - run the seeds.sql file if you wish to populate the database
 
 ## Usage
 
-
+Navigate to folder where index.js is located in your terminal then run the file using node, "node index.js" or use "npm start".  Please see the [video demonstration](https://drive.google.com/file/d/1BGJIWsW1DUkSrBxJWuzDgoLk_6UR_4mH/view) for it in practice. Below are example images of the terminal and the resulting website.
 
 ![Project Terminal Preview](./assets/images/project_preview.png)
 
