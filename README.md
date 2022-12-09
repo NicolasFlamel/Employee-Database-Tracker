@@ -15,9 +15,11 @@ This project was made with the intention of practicing and developing my SQL ski
 
 ## Usage
 
-Navigate to folder where index.js is located in your terminal then run the file using node, "node index.js" or use "npm start".  Please see the [video demonstration](https://drive.google.com/file/d/1BGJIWsW1DUkSrBxJWuzDgoLk_6UR_4mH/view) for it in practice. Below are example images of the terminal and the resulting website.
+Navigate to folder where index.js is located in your terminal then run the file using node, "node index.js" or use "npm start". You'll be presented a prompt in your terminal asking you to select an option provided, you can navigate using the 'arrow keys' and 'enter' to select. The 'View all..." will show you the data stored in your database which was placed in through the "Add..." option or through the seeds.sql file. It is formatted for easier reading. You can also delete data from the database but if you delete a department or role then all roles and employees under them will be deleted as well. You can update an employee's role/department before doing so through one of the options given at the main menu. Please see the [video demonstration](https://drive.google.com/file/d/1lk4-8Dy_WpzeIoDZYEtJ2JHeDUGySKae/view) for it in practice. Below are example images of the terminal and the resulting website.
 
-![Project Terminal Preview](./assets/images/project_preview.png)
+![Project Terminal Menu Preview](./assets/images/project_preview_menu.png)
+
+![Project Terminal In Use Preview](./assets/images/project_preview_in_use.png)
 
 ## License
 
