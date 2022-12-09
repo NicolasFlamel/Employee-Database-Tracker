@@ -10,13 +10,14 @@ const connection = getConnection();
 
 // loads main menu
 const mainMenu = async () => {
-    const { menuChoice } = await prompt(questions.getMenu());
-    const { subMenuChoice } = await prompt(questions.getSubMenu(menuChoice));
-    navigation(subMenuChoice);
+    const choice = await prompt(questions.getMenu());
+    navigation(choice);
 }
 
 // calls specific function depending on department selected
-const navigation = async menuChoice => {
+const navigation = async choice => {
+    const { menuChoice } = choice;
+
     switch (menuChoice) {
         case 'department':
         case 'role':
@@ -38,10 +39,9 @@ const navigation = async menuChoice => {
         case 'updateEmployeeManager':
             await updateEmployeeManager();
             break;
-        case 'deleteDepartment':
-        case 'deleteRole':
-        case 'deleteEmployee':
-            await deleteFromTable(menuChoice);
+        case 'deleteData':
+            const { deleteDataChoice } = choice
+            await deleteFromTable(deleteDataChoice);
             break;
         case 'return':
             break;
